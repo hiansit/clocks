@@ -3,849 +3,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sand Clock - 砂の時計 Widget</title>
-    <!-- Google Fonts からモダンな極太サンセリフフォントとモノスペースフォントをロード -->
+    <title>Clocks Collection - 変わり種時計コレクション</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
-        /* CSSカスタムプロパティによるテーマカラー設計 */
         :root {
-            --bg-gradient-start: #0a0d26;
-            --bg-gradient-end: #03040c;
-            --accent-color: #ffd700;
-            --ui-bg: rgba(10, 13, 38, 0.5);
-            --ui-border: rgba(255, 255, 255, 0.08);
-            --ui-text: #e2e8f0;
-            --ui-text-muted: #94a3b8;
-            --shadow-color: rgba(0, 0, 0, 0.5);
-        }
-
-        /* テーマ別のカラー定義 */
-        [data-theme="gold"] {
-            --bg-gradient-start: #060919;
-            --bg-gradient-end: #020308;
-            --accent-color: #f1c40f;
-            --ui-bg: rgba(6, 9, 25, 0.6);
-            --ui-border: rgba(241, 196, 15, 0.15);
-        }
-
-        [data-theme="rose"] {
-            --bg-gradient-start: #1c0f1d;
-            --bg-gradient-end: #080309;
-            --accent-color: #ff7597;
-            --ui-bg: rgba(28, 15, 29, 0.6);
-            --ui-border: rgba(255, 117, 151, 0.15);
-        }
-
-        [data-theme="teal"] {
-            --bg-gradient-start: #05161c;
-            --bg-gradient-end: #010609;
-            --accent-color: #00ffd5;
-            --ui-bg: rgba(5, 22, 28, 0.6);
-            --ui-border: rgba(0, 255, 213, 0.15);
-        }
-
-        [data-theme="cyber"] {
-            --bg-gradient-start: #0c0014;
-            --bg-gradient-end: #020005;
-            --accent-color: #ff007f;
-            --ui-bg: rgba(12, 0, 20, 0.7);
-            --ui-border: rgba(255, 0, 127, 0.2);
+            --bg-start: #080a1c;
+            --bg-end: #020308;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-gold: #ffd700;
+            --accent-rose: #ff7597;
+            --accent-teal: #00ffd5;
         }
 
         * {
             box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-
-        body, html {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--bg-gradient-end);
+        }
+
+        body {
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: var(--ui-text);
-            transition: background 1s ease;
-        }
-
-        /* メインの描画Canvas */
-        #sandCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            display: block;
-        }
-
-        /* 背景の美しいグラデーションコンテナ */
-        .bg-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-            z-index: 0;
-            transition: background 1s ease;
-        }
-
-        /* ガラスモーフィズムが美しいコントロールパネル（Widget風） */
-        .control-panel {
-            position: absolute;
-            top: 24px;
-            left: 24px;
-            z-index: 10;
-            width: 320px;
-            background: var(--ui-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--ui-border);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px var(--shadow-color);
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
-            transform-origin: top left;
-        }
-
-        .control-panel.collapsed {
-            animation: none !important;
-            transform: scale(0.9) translate(-20px, -20px) !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-
-        /* パネル開閉トグルボタン */
-        .toggle-btn {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            z-index: 11;
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: var(--ui-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--ui-border);
-            color: var(--accent-color);
+            background: radial-gradient(circle at center, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-x: hidden;
+            padding: 40px 20px;
         }
 
-        .toggle-btn:hover {
-            transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+        /* 背景の浮遊する静かな光の粒子 */
+        .ambient-glow {
+            position: absolute;
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, rgba(14, 20, 58, 0.4) 0%, rgba(0,0,0,0) 70%);
+            top: 10%;
+            left: 20%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .ambient-glow-2 {
+            position: absolute;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(28, 15, 29, 0.35) 0%, rgba(0,0,0,0) 70%);
+            bottom: 10%;
+            right: 15%;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        .toggle-btn svg {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-            transition: transform 0.5s ease;
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            z-index: 1;
+            text-align: center;
         }
 
-        /* ヘッダーデザイン */
-        .panel-header {
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--ui-border);
-            padding-bottom: 12px;
+        header {
+            margin-bottom: 60px;
+            animation: fadeInDown 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .panel-title {
-            font-size: 1.25rem;
+        h1 {
+            font-size: 3rem;
             font-weight: 900;
-            letter-spacing: 0.05em;
-            margin: 0;
+            letter-spacing: -0.02em;
             text-transform: uppercase;
-            background: linear-gradient(135deg, #ffffff 0%, var(--accent-color) 100%);
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            margin-bottom: 12px;
         }
 
-        .panel-subtitle {
-            font-size: 0.75rem;
-            color: var(--ui-text-muted);
-            margin: 4px 0 0 0;
-        }
-
-        /* 各コントロール項目 */
-        .control-group {
-            margin-bottom: 18px;
-        }
-
-        .control-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: var(--ui-text-muted);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .control-value {
-            color: var(--accent-color);
-            font-family: 'Share Tech Mono', monospace;
-        }
-
-        /* スライダーのプレミアムデザイン */
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.1);
-            outline: none;
-            transition: background 0.3s;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: pointer;
-            box-shadow: 0 0 10px var(--accent-color);
-            transition: transform 0.1s, background-color 0.3s;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        /* セレクトボタン（テーマ切り替えなど） */
-        .theme-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .theme-btn {
-            height: 36px;
-            border: 1px solid var(--ui-border);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.02);
-            cursor: pointer;
-            position: relative;
-            transition: all 0.3s;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .theme-btn:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .theme-btn.active {
-            border-color: var(--accent-color);
-            background: rgba(255, 255, 255, 0.05);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-        }
-
-        .theme-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            box-shadow: 0 0 6px currentColor;
-        }
-
-        /* 時刻表示フォーマットの切り替えトグル */
-        .toggle-switch {
-            display: flex;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 3px;
-            border: 1px solid var(--ui-border);
-        }
-
-        .toggle-option {
-            flex: 1;
-            text-align: center;
-            padding: 6px 0;
-            font-size: 0.8rem;
-            font-weight: 800;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.3s;
-            color: var(--ui-text-muted);
-        }
-
-        .toggle-option.active {
-            background: var(--accent-color);
-            color: #000000;
-            font-weight: 900;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        /* 画面右下のWidgetステータス情報 */
-        .info-panel {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            z-index: 10;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.8rem;
-            color: var(--ui-text-muted);
-            text-align: right;
-            pointer-events: none;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        p.subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
             line-height: 1.6;
         }
 
-        .info-panel span {
-            color: var(--accent-color);
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            width: 100%;
+            justify-content: center;
+            animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+            opacity: 0;
         }
 
-        /* フェードイン表示用のクラス */
-        .fade-in {
-            animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        /* ガラスモーフィズムカード */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 32px;
+            text-align: left;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 320px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-gold);
+            transition: all 0.3s;
+        }
+
+        .card:hover .card-icon {
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(15deg);
+        }
+
+        /* カードごとのカスタムアクセントカラー効果 */
+        .card.sand:hover {
+            border-color: var(--accent-gold);
+            box-shadow: 0 15px 35px rgba(255, 215, 0, 0.1);
+        }
+        .card.sand:hover .card-icon {
+            color: #000;
+            background: var(--accent-gold);
+            box-shadow: 0 0 15px var(--accent-gold);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+            transition: color 0.3s;
+        }
+
+        .card:hover .card-title {
+            color: #fff;
+        }
+
+        .card-description {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: auto;
+        }
+
+        .card-footer {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-gold);
+            transition: gap 0.3s;
+        }
+
+        .card:hover .card-footer {
+            gap: 12px;
+        }
+
+        footer.site-footer {
+            margin-top: 80px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            z-index: 1;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        /* プレースホルダー（新規時計追加用）カード */
+        .card.placeholder {
+            border-style: dashed;
+            border-color: rgba(255, 255, 255, 0.15);
+            background: transparent;
+            justify-content: center;
+            align-items: center;
+            min-height: 320px;
+            cursor: default;
+        }
+        
+        .card.placeholder:hover {
+            transform: none;
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+
+        .placeholder-text {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .placeholder-text svg {
+            width: 32px;
+            height: 32px;
+            stroke: currentColor;
+        }
+
+        /* キーフレームアニメーション */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* レスポンシブ対応：モバイル画面でのUIサイズ調整 */
-        @media (max-width: 480px) {
-            .control-panel {
-                width: calc(100% - 48px);
-                top: 80px;
-                left: 24px;
-            }
-            .toggle-btn {
-                top: 16px;
-                right: 24px;
-            }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2.2rem; }
+            p.subtitle { font-size: 0.95rem; }
+            .grid { gap: 20px; }
         }
     </style>
 </head>
 <body>
-    <!-- 背景グラデーション -->
-    <div class="bg-overlay"></div>
+    <!-- 背景のエフェクト -->
+    <div class="ambient-glow"></div>
+    <div class="ambient-glow-2"></div>
 
-    <!-- 描画用キャンバス -->
-    <canvas id="sandCanvas"></canvas>
+    <div class="container">
+        <header>
+            <h1>Clocks Collection</h1>
+            <p class="subtitle">ユニークな物理演算とビジュアルデザインを組み合わせた、ブラウザ上で動作する「変わり種デジタル時計」の統合コレクションです。</p>
+        </header>
 
-    <!-- UI開閉トグルボタン -->
-    <button class="toggle-btn" id="panelToggle" title="設定を開閉">
-        <svg viewBox="0 0 24 24" id="gearIcon">
-            <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.57-3-3.5s1.07-3.5 3-3.5 3 1.57 3 3.5-1.07 3.5-3 3.5z"/>
-        </svg>
-    </button>
+        <div class="grid">
+            <!-- 砂の時計 -->
+            <a href="./sandclock/" class="card sand">
+                <div>
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.5l-4-4-4 4V20h8v-3.5zm-4-5l4-4V4H8v3.5l4 4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="card-title">Sand Clock</h2>
+                    <p class="card-description">時刻を構成する数千の砂粒が、時間変化とともにサラサラと美しく崩れて次の数字に再結集する、物理シミュレーション砂時計Widgetです。</p>
+                </div>
+                <div class="card-footer">
+                    時計を起動する
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </div>
+            </a>
 
-    <!-- Widgetコントロールパネル -->
-    <div class="control-panel fade-in" id="controlPanel">
-        <div class="panel-header">
-            <h1 class="panel-title">
-                <svg width="24" height="24" viewBox="0 0 24 24" style="fill: var(--accent-color); vertical-align: middle;">
-                    <path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.5l-4-4-4 4V20h8v-3.5zm-4-5l4-4V4H8v3.5l4 4zM10 6h4v.75l-2 2-2-2V6z"/>
-                </svg>
-                SAND CLOCK
-            </h1>
-            <p class="panel-subtitle">砂の物理シミュレーション時計 Widget</p>
-        </div>
-
-        <!-- テーマ設定 -->
-        <div class="control-group">
-            <div class="control-label">テーマ選択</div>
-            <div class="theme-grid">
-                <button class="theme-btn active" data-theme-id="gold" title="Midnight Gold">
-                    <span class="theme-dot" style="color: #ffd700; background-color: #ffd700;"></span>
-                </button>
-                <button class="theme-btn" data-theme-id="rose" title="Rose Quartz">
-                    <span class="theme-dot" style="color: #ff7597; background-color: #ff7597;"></span>
-                </button>
-                <button class="theme-btn" data-theme-id="teal" title="Aurora Teal">
-                    <span class="theme-dot" style="color: #00ffd5; background-color: #00ffd5;"></span>
-                </button>
-                <button class="theme-btn" data-theme-id="cyber" title="Neon Pulse">
-                    <span class="theme-dot" style="color: #ff007f; background-color: #ff007f;"></span>
-                </button>
+            <!-- 次の時計のためのプレースホルダー -->
+            <div class="card placeholder">
+                <div class="placeholder-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <span>COMING SOON</span>
+                </div>
             </div>
         </div>
 
-        <!-- 表示フォーマット -->
-        <div class="control-group">
-            <div class="control-label">時間フォーマット</div>
-            <div class="toggle-switch">
-                <div class="toggle-option active" data-format="seconds">HH:MM:SS</div>
-                <div class="toggle-option" data-format="minutes">HH:MM</div>
-            </div>
-        </div>
-
-        <!-- 砂粒の最大数 -->
-        <div class="control-group">
-            <div class="control-label">
-                砂の総数
-                <span class="control-value" id="valParticles">4000</span>
-            </div>
-            <input type="range" id="sliderParticles" min="1000" max="8000" step="500" value="4000">
-        </div>
-
-        <!-- 砂粒のサイズ -->
-        <div class="control-group" style="margin-bottom: 0;">
-            <div class="control-label">
-                砂の粒径
-                <span class="control-value" id="valSize">1.5px</span>
-            </div>
-            <input type="range" id="sliderSize" min="1.0" max="3.0" step="0.1" value="1.5">
-        </div>
+        <footer class="site-footer">
+            <p>&copy; 2026 Clocks Collection. Built with Pure HTML5 Canvas & Vanilla JS.</p>
+        </footer>
     </div>
-
-    <!-- 右下の Widget 情報オーバーレイ -->
-    <div class="info-panel fade-in">
-        SYSTEM: <span id="statusFPS">60</span> FPS<br>
-        PARTICLES: <span id="statusCount">0</span> ACTIVES<br>
-        WIND & ACCEL: <span id="statusWind">OFF</span>
-    </div>
-
-    <script>
-        /**
-         * 砂の時計 Webアプリケーション (Widget風)
-         * HTML5 Canvas & Vanilla JS による物理パーティクルシミュレーション
-         */
-
-        // --- 定数とグローバル状態の管理 ---
-        const canvas = document.getElementById('sandCanvas');
-        const ctx = canvas.getContext('2d');
-
-        const statusFPS = document.getElementById('statusFPS');
-        const statusCount = document.getElementById('statusCount');
-
-        // パラメータ状態（風と引力強さは自動超高速収束ロジック化のためUIから削除）
-        const state = {
-            theme: 'gold',
-            format: 'seconds', // 'seconds' = HH:mm:ss, 'minutes' = HH:mm
-            maxParticles: 4000,
-            particleSize: 1.5,
-            lastTimeStr: '',
-            transitionProgress: 1.0, // 新しい時刻に遷移する際の一時的引力減衰係数
-            scatterTriggered: false
-        };
-
-        // カラーテーマ用パレット詳細定義 (HSL値で揺らぎを出すため)
-        const themePalettes = {
-            gold: {
-                baseHue: 40,
-                hueRange: 15,
-                satMin: 75,
-                satMax: 95,
-                lightMin: 50,
-                lightMax: 70,
-                alphaMin: 0.5,
-                alphaMax: 0.95
-            },
-            rose: {
-                baseHue: 340,
-                hueRange: 20,
-                satMin: 70,
-                satMax: 95,
-                lightMin: 55,
-                lightMax: 75,
-                alphaMin: 0.5,
-                alphaMax: 0.95
-            },
-            teal: {
-                baseHue: 170,
-                hueRange: 20,
-                satMin: 80,
-                satMax: 100,
-                lightMin: 45,
-                lightMax: 65,
-                alphaMin: 0.5,
-                alphaMax: 0.95
-            },
-            cyber: {
-                baseHue: 280, 
-                hueRange: 120,
-                satMin: 90,
-                satMax: 100,
-                lightMin: 50,
-                lightMax: 65,
-                alphaMin: 0.6,
-                alphaMax: 1.0
-            }
-        };
-
-        // --- オフスクリーンキャンバスの作成 ---
-        const offscreenCanvas = document.createElement('canvas');
-        const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
-        const OFFSCREEN_WIDTH = 560;
-        const OFFSCREEN_HEIGHT = 100;
-        offscreenCanvas.width = OFFSCREEN_WIDTH;
-        offscreenCanvas.height = OFFSCREEN_HEIGHT;
-
-        // 描画用のパーティクル配列
-        let particles = [];
-        // 目標位置の座標リスト
-        let targets = [];
-
-        // FPS算出用の変数
-        let lastFrameTime = performance.now();
-        let frameCount = 0;
-        let fps = 60;
-
-        // --- 画面サイズリサイズ処理 ---
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
-            if (state.lastTimeStr) {
-                updateTimeTargets(true); 
-            }
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // --- パーティクルクラスの設計 ---
-        class Particle {
-            constructor() {
-                this.reset(true);
-            }
-
-            // パーティクルの初期化
-            reset(fullReset = false) {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.vx = 0;
-                this.vy = 0;
-                
-                this.targetX = null;
-                this.targetY = null;
-                
-                // 5倍の超高速収束を実現するための高スピード係数と高めの摩擦減衰
-                this.speedCoef = 0.16 + Math.random() * 0.14; 
-                this.friction = 0.70 + Math.random() * 0.10; 
-                this.angle = Math.random() * Math.PI * 2;
-                
-                this.size = state.particleSize * (0.6 + Math.random() * 0.8);
-                this.initColor();
-            }
-
-            // テーマに基づいた色の決定
-            initColor() {
-                const p = themePalettes[state.theme];
-                let hue = p.baseHue + (Math.random() - 0.5) * p.hueRange;
-                
-                if (state.theme === 'cyber') {
-                    hue = Math.random() < 0.5 ? 195 : 320; 
-                }
-
-                const sat = p.satMin + Math.random() * (p.satMax - p.satMin);
-                const light = p.lightMin + Math.random() * (p.lightMax - p.lightMin);
-                const alpha = p.alphaMin + Math.random() * (p.alphaMax - p.alphaMin);
-                
-                this.color = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
-            }
-
-            // 毎フレームの物理更新 (風の影響を完全にカットした超高速高精度物理)
-            update(time, frameCount) {
-                if (this.targetX !== null && this.targetY !== null) {
-                    const dx = this.targetX - this.x;
-                    const dy = this.targetY - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    // 2px以下に近づいた場合は目標座標に直接スナップ（吸着）してブレを防ぎ、輪郭をシャープに固定
-                    if (dist < 2.0) {
-                        this.x = this.targetX;
-                        this.y = this.targetY;
-                        this.vx = 0;
-                        this.vy = 0;
-                        return;
-                    }
-
-                    // 目標への超強力引力
-                    const attractionStrength = this.speedCoef * state.transitionProgress;
-                    this.vx += dx * attractionStrength;
-                    this.vy += dy * attractionStrength;
-
-                    // 物理パラメーターの適用
-                    this.vx *= this.friction;
-                    this.vy *= this.friction;
-                    this.x += this.vx;
-                    this.y += this.vy;
-                } else {
-                    // ターゲットを持たない余剰粒子は画面外へ退避（描画もされません）
-                    this.x = -100;
-                    this.y = -100;
-                    this.vx = 0;
-                    this.vy = 0;
-                }
-
-                // 粒径設定に追従
-                this.size = state.particleSize * (0.8 + Math.sin(this.angle + this.x) * 0.2);
-            }
-
-            // メインキャンバスへの砂粒描画 (ターゲットを持つアクティブな粒子のみ描画し、背景の砂を消去)
-            draw() {
-                if (this.targetX === null || this.targetY === null) {
-                    return; 
-                }
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        // --- パーティクルプールの初期化 ---
-        function initParticles() {
-            particles = [];
-            for (let i = 0; i < state.maxParticles; i++) {
-                particles.push(new Particle());
-            }
-        }
-
-        // --- 時刻テキストからピクセル座標を抽出（オフスクリーン Canvas） ---
-        function updateTimeTargets(forceRebuild = false) {
-            const now = new Date();
-            const hrs = String(now.getHours()).padStart(2, '0');
-            const mins = String(now.getMinutes()).padStart(2, '0');
-            const secs = String(now.getSeconds()).padStart(2, '0');
-            
-            const timeStr = state.format === 'seconds' ? `${hrs}:${mins}:${secs}` : `${hrs}:${mins}`;
-
-            if (timeStr === state.lastTimeStr && !forceRebuild) {
-                return;
-            }
-
-            // 分または時が変わったかどうかの判定 (大きな変化)
-            let isMajorChange = true;
-            if (state.lastTimeStr && state.format === 'seconds' && !forceRebuild) {
-                const lastParts = state.lastTimeStr.split(':');
-                const lastHrs = lastParts[0];
-                const lastMins = lastParts[1];
-                isMajorChange = (hrs !== lastHrs) || (mins !== lastMins);
-            }
-
-            state.lastTimeStr = timeStr;
-
-            if (isMajorChange) {
-                // 分・時が変わった時は、少しだけ引力を落としてスライドアニメーションの余韻を残す
-                state.transitionProgress = 0.50; 
-                state.scatterTriggered = true;
-            } else {
-                // 秒だけが変わった小さな変化の時は、一瞬で収束させるため引力をほぼ落とさない
-                state.transitionProgress = 0.90; 
-                state.scatterTriggered = false;
-            }
-
-            offscreenCtx.clearRect(0, 0, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
-
-            // 時刻テキストの描画
-            offscreenCtx.fillStyle = '#ffffff';
-            offscreenCtx.font = '900 84px "Outfit", sans-serif';
-            offscreenCtx.textAlign = 'center';
-            offscreenCtx.textBaseline = 'middle';
-            offscreenCtx.fillText(timeStr, OFFSCREEN_WIDTH / 2, OFFSCREEN_HEIGHT / 2 + 5);
-
-            const imgData = offscreenCtx.getImageData(0, 0, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
-            const data = imgData.data;
-
-            targets = [];
-
-            // 砂粒の数に応じてサンプリングピッチを調整
-            let step = 3;
-            if (state.maxParticles < 3000) step = 4;
-            else if (state.maxParticles > 6000) step = 2;
-
-            const scale = Math.min((canvas.width * 0.85) / OFFSCREEN_WIDTH, (canvas.height * 0.45) / OFFSCREEN_HEIGHT);
-            const offsetX = canvas.width / 2 - (OFFSCREEN_WIDTH / 2) * scale;
-            const offsetY = canvas.height / 2 - (OFFSCREEN_HEIGHT / 2) * scale;
-
-            // 描画された文字座標を収集
-            for (let y = 0; y < OFFSCREEN_HEIGHT; y += step) {
-                for (let x = 0; x < OFFSCREEN_WIDTH; x += step) {
-                    const idx = (y * OFFSCREEN_WIDTH + x) * 4;
-                    const alpha = data[idx + 3];
-
-                    if (alpha > 140) {
-                        const targetX = x * scale + offsetX;
-                        const targetY = y * scale + offsetY;
-                        targets.push({ x: targetX, y: targetY });
-                    }
-                }
-            }
-
-            // CRITICAL: ターゲット座標のシャッフル(shuffleArray)を完全に廃止しました。
-            // これにより、ピクセル走査順（左から右）で粒子に順次ターゲットが割り当てられます。
-            // 粒子もインデックス順に同じ横位置に近いターゲットを割り当てられるため、
-            // 時間更新時の粒子の移動距離が極小化され、超高速（ほぼ一瞬）での文字収束が実現します。
-
-            // すべての粒子について、一度目標を解除
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].targetX = null;
-                particles[i].targetY = null;
-            }
-
-            // ターゲット座標を、利用可能な粒子に順次割り当てる
-            const assignCount = Math.min(particles.length, targets.length);
-            for (let i = 0; i < assignCount; i++) {
-                particles[i].targetX = targets[i].x;
-                particles[i].targetY = targets[i].y;
-
-                // 分・時が変わった瞬間のみ、わずかに粒子を散らして崩壊の演出効果を追加
-                if (state.scatterTriggered && isMajorChange) {
-                    particles[i].vx += (Math.random() - 0.5) * 6;
-                    particles[i].vy += (Math.random() - 0.5) * 6;
-                }
-            }
-            state.scatterTriggered = false;
-        }
-
-        // --- メインアニメーションループ ---
-        function animate(time) {
-            // 背景クリアと残像トレイル効果（残像を少しシャープにするため透過度を0.42に調整）
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-gradient-end').trim() || '#03040c';
-            ctx.globalAlpha = 0.42; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.globalAlpha = 1.0;
-
-            updateTimeTargets();
-
-            // 時刻切り替え後の引力復元 (0.015 から 0.12 へ約8倍に高速化し、0.05秒で完全復元)
-            if (state.transitionProgress < 1.0) {
-                state.transitionProgress += 0.12; 
-                if (state.transitionProgress > 1.0) {
-                    state.transitionProgress = 1.0;
-                }
-            }
-
-            let renderedCount = 0;
-            ctx.globalCompositeOperation = 'source-over';
-
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                p.update(time, frameCount);
-                p.draw();
-                if (p.targetX !== null) {
-                    renderedCount++;
-                }
-            }
-
-            // FPS算出
-            frameCount++;
-            const now = performance.now();
-            if (now - lastFrameTime >= 1000) {
-                fps = Math.round((frameCount * 1000) / (now - lastFrameTime));
-                statusFPS.textContent = fps;
-                frameCount = 0;
-                lastFrameTime = now;
-            }
-
-            // ステータス表示の更新（描画されているアクティブ粒子数のみ表示）
-            statusCount.textContent = renderedCount;
-
-            requestAnimationFrame(animate);
-        }
-
-        // --- UIイベントハンドラ＆コントロール同期 ---
-        function setupUI() {
-            const panel = document.getElementById('controlPanel');
-            const toggle = document.getElementById('panelToggle');
-            const gearIcon = document.getElementById('gearIcon');
-
-            // 1. コントロールパネルの表示非表示トグル（Widget鑑賞モード）
-            toggle.addEventListener('click', () => {
-                const isCollapsed = panel.classList.toggle('collapsed');
-                if (isCollapsed) {
-                    gearIcon.style.transform = 'rotate(180deg)';
-                    toggle.setAttribute('title', '設定を開く');
-                } else {
-                    gearIcon.style.transform = 'rotate(0deg)';
-                    toggle.setAttribute('title', '設定を閉じる');
-                }
-            });
-
-            // 2. テーマ切り替えボタン群のハンドリング
-            const themeBtns = document.querySelectorAll('.theme-btn');
-            themeBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const targetTheme = btn.getAttribute('data-theme-id');
-                    themeBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    
-                    document.documentElement.setAttribute('data-theme', targetTheme);
-                    state.theme = targetTheme;
-
-                    for (let i = 0; i < particles.length; i++) {
-                        particles[i].initColor();
-                    }
-                });
-            });
-
-            // 3. 時間フォーマットトグル
-            const formatOptions = document.querySelectorAll('.toggle-option');
-            formatOptions.forEach(opt => {
-                opt.addEventListener('click', () => {
-                    formatOptions.forEach(o => o.classList.remove('active'));
-                    opt.classList.add('active');
-                    state.format = opt.getAttribute('data-format');
-                    updateTimeTargets(true); 
-                });
-            });
-
-            // 4. スライダーの同期
-            const sliderSync = (sliderId, valueId, stateKey, suffix = '', callback = null) => {
-                const slider = document.getElementById(sliderId);
-                const output = document.getElementById(valueId);
-                slider.addEventListener('input', (e) => {
-                    const val = parseFloat(e.target.value);
-                    output.textContent = val + suffix;
-                    state[stateKey] = val;
-                    if (callback) callback(val);
-                });
-            };
-
-            // 砂粒数スライダー同期
-            sliderSync('sliderParticles', 'valParticles', 'maxParticles', '', (val) => {
-                const diff = val - particles.length;
-                if (diff > 0) {
-                    for (let i = 0; i < diff; i++) {
-                        const newP = new Particle();
-                        newP.reset(true); 
-                        particles.push(newP);
-                    }
-                } else if (diff < 0) {
-                    particles.splice(val);
-                }
-                updateTimeTargets(true);
-            });
-
-            // 砂粒の大きさスライダー同期
-            sliderSync('sliderSize', 'valSize', 'particleSize', 'px');
-        }
-
-        // --- アプリケーション起動処理 ---
-        function init() {
-            initParticles();
-            updateTimeTargets(true);
-            setupUI();
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
 </body>
 </html>
