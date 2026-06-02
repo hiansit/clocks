@@ -1,0 +1,24 @@
+# Windows generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS generated files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor directories and files (VS Code, WebStorm, etc.)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Temporary files
+*.tmp
+*.temp
+*~
