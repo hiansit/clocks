@@ -22,3 +22,6 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 *~
+
+# Local documentation (contains absolute paths)
+docs/

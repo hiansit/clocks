@@ -18,6 +18,7 @@
             --accent-gold: #ffd700;
             --accent-rose: #ff7597;
             --accent-teal: #00ffd5;
+            --accent-vermilion: #e74c3c;
         }
 
         * {
@@ -182,6 +183,15 @@
             background: var(--accent-gold);
             box-shadow: 0 0 15px var(--accent-gold);
         }
+        .card.incense:hover {
+            border-color: var(--accent-vermilion);
+            box-shadow: 0 15px 35px rgba(231, 76, 60, 0.12);
+        }
+        .card.incense:hover .card-icon {
+            color: #000;
+            background: var(--accent-vermilion);
+            box-shadow: 0 0 15px var(--accent-vermilion);
+        }
 
         .card-title {
             font-size: 1.5rem;
@@ -307,6 +317,28 @@
                     </div>
                     <h2 class="card-title">Sand Clock</h2>
                     <p class="card-description">時刻を構成する数千の砂粒が、時間変化とともにサラサラと美しく崩れて次の数字に再結集する、物理シミュレーション砂時計Widgetです。</p>
+                </div>
+                <div class="card-footer">
+                    時計を起動する
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </div>
+            </a>
+
+            <!-- 香時計 -->
+            <a href="./incense/index.html" class="card incense">
+                <div>
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="card-title">Incense Clock</h2>
+                    <p class="card-description">24時間にわたる一筆書きのジグザグお香経路。小さく赤く燃える火点から煙がゆらゆらと立ち上り、時の経過を静かに告げる和モダンな香盤時計です。</p>
                 </div>
                 <div class="card-footer">
                     時計を起動する
