@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incense Clock - 香時計 Widget</title>
+    <!-- Google Fonts から極太サンセリフと、和風モダンな明朝体、モノスペースフォントをロード -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Shippori+Mincho:wght@500;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* CSSカスタムプロパティによる和モダン・テーマ設計 */
+        :root {
+            --bg-gradient-start: #0f0a0a;
+            --bg-gradient-end: #030202;
+            --accent-color: #e74c3c;
+            --panel-bg: rgba(15, 10, 10, 0.6);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f5f0eb;
+            --text-muted: #a89f95;
+            --tray-bg: #140e0e;
+            --tray-border: #2c1e1e;
+        }
+
+        /* 1. 漆黒 (Shikkoku) - 朱と漆の伝統色 */
+        [data-theme="shikkoku"] {
+            --bg-gradient-start: #0d0909;
+            --bg-gradient-end: #030202;
+            --accent-color: #d35400;
+            --panel-bg: rgba(13, 9, 9, 0.65);
+            --panel-border: rgba(211, 84, 0, 0.15);
+            --tray-bg: #120c0c;
+            --tray-border: #27140b;
+        }
+
+        /* 2. 白磁 (Hakuji) - 陶器の透明感とモダングレー */
+        [data-theme="hakuji"] {
+            --bg-gradient-start: #1e222b;
+            --bg-gradient-end: #0c0e12;
+            --accent-color: #2ecc71;
+            --panel-bg: rgba(30, 34, 43, 0.7);
+            --panel-border: rgba(46, 204, 113, 0.15);
+            --text-primary: #e6ecef;
+            --text-muted: #8fa0a8;
+            --tray-bg: #15181f;
+            --tray-border: #232a35;
+        }
+
+        /* 3. 紫檀 (Shitan) - 格調高い木目と高貴な金泥 */
+        [data-theme="shitan"] {
+            --bg-gradient-start: #1c0d0d;
+            --bg-gradient-end: #070303;
+            --accent-color: #f1c40f;
+            --panel-bg: rgba(28, 13, 13, 0.7);
+            --panel-border: rgba(241, 196, 15, 0.15);
+            --text-primary: #faebd7;
+            --text-muted: #bda290;
+            --tray-bg: #160a0a;
+            --tray-border: #321616;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-gradient-end);
+            font-family: 'Shippori Mincho', serif;
+            color: var(--text-primary);
+            transition: background 1s ease;
+        }
+
+        /* メイン描画用Canvas */
+        #incenseCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+        }
+
+        /* 背景グラデーション */
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            z-index: 0;
+            transition: background 1s ease;
+        }
+
+        /* ガラスモーフィズム設定パネル */
+        .control-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 10;
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+            transform-origin: top left;
+        }
+
+        .control-panel.collapsed {
+            transform: scale(0.9) translate(-20px, -20px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* パネル開閉ギアボタン */
+        .toggle-btn {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 11;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+            transition: transform 0.5s ease;
+        }
+
+        /* 戻るボタン */
+        .back-btn {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 10;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--text-muted);
+            transform: translateX(4px);
+        }
+
+        /* ヘッダー */
+        .panel-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .panel-title span.accent-text {
+            color: var(--accent-color);
+        }
+
+        .panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 4px 0 0 0;
+        }
+
+        /* 各種設定項目 */
+        .control-group {
+            margin-bottom: 18px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.08em;
+        }
+
+        .control-value {
+            color: var(--accent-color);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* 和風テーマ選択グリッド */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .theme-btn {
+            height: 38px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-family: 'Shippori Mincho', serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+        }
+
+        .theme-btn.active {
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 800;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
+        }
+
+        .theme-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* モード切り替えトグル */
+        .toggle-switch {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 3px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .toggle-option {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            color: var(--text-muted);
+        }
+
+        .toggle-option.active {
+            background: var(--accent-color);
+            color: #030202;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* スライダー */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-color);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        /* 右下の補助デジタル表示 */
+        .info-panel {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            line-height: 1.6;
+        }
+
+        .info-panel span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* デジタル時計表示 */
+        .digital-clock {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* フェードイン表示 */
+        .fade-in {
+            animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .control-panel {
+                width: calc(100% - 48px);
+                top: 80px;
+                left: 24px;
+            }
+            .toggle-btn {
+                top: 16px;
+                right: 24px;
+            }
+        }
+    </style>
+</head>
+<body data-theme="shikkoku">
+    <!-- 背景グラデーション -->
+    <div class="bg-overlay"></div>
+
+    <!-- 描画用キャンバス -->
+    <canvas id="incenseCanvas"></canvas>
+
+    <!-- 戻るボタン -->
+    <a href="../index.html" class="back-btn fade-in">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        コレクションに戻る
+    </a>
+
+    <!-- UI開閉トグルボタン -->
+    <button class="toggle-btn" id="panelToggle" title="設定を開閉">
+        <svg viewBox="0 0 24 24" id="gearIcon">
+            <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.57-3-3.5s1.07-3.5 3-3.5 3 1.57 3 3.5-1.07 3.5-3 3.5z"/>
+        </svg>
+    </button>
+
+    <!-- コントロールパネル -->
+    <div class="control-panel fade-in" id="controlPanel">
+        <div class="panel-header">
+            <h1 class="panel-title">
+                <svg width="22" height="22" viewBox="0 0 24 24" style="fill: var(--accent-color); vertical-align: middle; margin-right: 4px;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+                香時計 <span class="accent-text">INCENSE</span>
+            </h1>
+            <p class="panel-subtitle">お香の燃焼による伝統的な時間計測器</p>
+        </div>
+
+        <!-- 和風テーマ選択 -->
+        <div class="control-group">
+            <div class="control-label">色彩テーマ</div>
+            <div class="theme-grid">
+                <button class="theme-btn active" data-theme-id="shikkoku" title="漆黒">
+                    <span class="theme-dot" style="background-color: #e74c3c;"></span>
+                    漆黒
+                </button>
+                <button class="theme-btn" data-theme-id="hakuji" title="白磁">
+                    <span class="theme-dot" style="background-color: #2ecc71;"></span>
+                    白磁
+                </button>
+                <button class="theme-btn" data-theme-id="shitan" title="紫檀">
+                    <span class="theme-dot" style="background-color: #f1c40f;"></span>
+                    紫檀
+                </button>
+            </div>
+        </div>
+
+        <!-- 動作モード -->
+        <div class="control-group">
+            <div class="control-label">動作モード</div>
+            <div class="toggle-switch">
+                <div class="toggle-option active" data-mode="realtime">現在時刻同期</div>
+                <div class="toggle-option" data-mode="demo">高速デモ</div>
+            </div>
+        </div>
+
+        <!-- 煙の発生量設定 -->
+        <div class="control-group" style="margin-bottom: 0;">
+            <div class="control-label">
+                煙の発生頻度
+                <span class="control-value" id="valSmoke">多</span>
+            </div>
+            <input type="range" id="sliderSmoke" min="1" max="5" step="1" value="4">
+        </div>
+    </div>
+
+    <!-- 右下のデジタル情報表示 -->
+    <div class="info-panel fade-in">
+        <div class="digital-clock" id="digitalTime">00:00:00</div>
+        STATUS: <span id="statusMode">同期中</span><br>
+        INCENSE TEMPERATURE: <span id="statusTemp">780</span>°C<br>
+        FPS: <span id="statusFPS">60</span>
+    </div>
+
+    <script>
+        // --- 定数・グローバル状態の管理 ---
+        const canvas = document.getElementById('incenseCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const digitalTime = document.getElementById('digitalTime');
+        const statusMode = document.getElementById('statusMode');
+        const statusFPS = document.getElementById('statusFPS');
+
+        // アプリケーションの状態
+        const state = {
+            theme: 'shikkoku',
+            mode: 'realtime', // 'realtime' or 'demo'
+            smokeFrequency: 4, // 1〜5 (多いほど煙の発生頻度大)
+            demoTime: 0, // デモモード時の累積秒数 (0〜86400)
+            lastFrameTime: performance.now(),
+            frameCount: 0,
+            fps: 60
+        };
+
+        // 和風テーマごとのビジュアル設定
+        const themeConfig = {
+            shikkoku: {
+                bgStart: '#0d0909',
+                bgEnd: '#030202',
+                accentColor: '#e74c3c',
+                incenseBase: '#2d3319', // お香のベース色 (抹香の深い深緑)
+                incenseHighlight: '#556b2f', // お香のハイライト (抹茶の若緑)
+                ashBase: '#7f8c8d', // 灰のベース色
+                ashHighlight: '#bdc3c7', // 灰のハイライト (白い灰)
+                incenseWidth: 7,
+                ashWidth: 4,
+                glowColor: 'rgba(231, 76, 60, 0.8)',
+                plateColor: '#120c0c',
+                plateBorder: '#27140b',
+                textColor: '#f5f0eb',
+                textMuted: '#a89f95'
+            },
+            hakuji: {
+                bgStart: '#1d222d',
+                bgEnd: '#090b0e',
+                accentColor: '#2ecc71',
+                incenseBase: '#5c4033', // お香のベース色 (伽羅の焦茶)
+                incenseHighlight: '#8b5a2b', // お香のハイライト (香木の茶)
+                ashBase: '#555f69', 
+                ashHighlight: '#a0aab5',
+                incenseWidth: 7,
+                ashWidth: 4,
+                glowColor: 'rgba(46, 204, 113, 0.8)',
+                plateColor: '#15181f',
+                plateBorder: '#232a35',
+                textColor: '#e6ecef',
+                textMuted: '#8fa0a8'
+            },
+            shitan: {
+                bgStart: '#1e0c0c',
+                bgEnd: '#060202',
+                accentColor: '#f1c40f',
+                incenseBase: '#7a5a40', // お香のベース色 (白檀の淡褐色)
+                incenseHighlight: '#b8860b', // お香のハイライト (黄土色)
+                ashBase: '#4d433c',
+                ashHighlight: '#8c7d70',
+                incenseWidth: 7,
+                ashWidth: 4,
+                glowColor: 'rgba(241, 196, 15, 0.8)',
+                plateColor: '#160a0a',
+                plateBorder: '#321616',
+                textColor: '#faebd7',
+                textMuted: '#bda290'
+            }
+        };
+
+        // グリッド・レイアウト設定
+        let grid = {
+            cols: 6,
+            rows: 4,
+            cellW: 0,
+            cellH: 0,
+            gap: 0,
+            marginX: 0,
+            marginY: 0,
+            plateW: 0,
+            plateH: 0,
+            plateX: 0,
+            plateY: 0
+        };
+
+        // 一筆書きの全頂点座標リスト (グローバル座標)
+        let globalPoints = [];
+        // 各頂点間の距離、累積距離
+        let pathDistances = [];
+        let totalPathLength = 0;
+
+        // 煙パーティクルの配列
+        let smokeParticles = [];
+
+        // 十二支の名前 (0時〜23時のインデックスに合わせる)
+        const junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+
+        // --- 1. 座標系・グリッドレイアウトの計算 ---
+        function calculateLayout() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const padRatio = 0.08; // 画面余白
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // アスペクト比を保ちつつ、香盤（トレイ）が美しく収まるサイズを決定
+            // 6列×4行なので、横：縦の比率を 約 3 : 2 とする。
+            const targetAspect = 1.45; 
+            let plateW, plateH;
+
+            if (w / h > targetAspect) {
+                plateH = h * (1 - padRatio * 2);
+                plateW = plateH * targetAspect;
+            } else {
+                plateW = w * (1 - padRatio * 2);
+                plateH = plateW / targetAspect;
+            }
+
+            // 最小サイズ保証
+            plateW = Math.max(plateW, 300);
+            plateH = Math.max(plateH, plateW / targetAspect);
+
+            grid.plateW = plateW;
+            grid.plateH = plateH;
+            grid.plateX = (w - plateW) / 2;
+            grid.plateY = (h - plateH) / 2;
+
+            // グリッド内のマージンとセルサイズ
+            const internalPadding = plateW * 0.05; // 香盤内側の余白
+            const gridW = plateW - internalPadding * 2;
+            const gridH = plateH - internalPadding * 2;
+
+            grid.gap = plateW * 0.02; // セル同士の隙間
+            grid.cellW = (gridW - grid.gap * (grid.cols - 1)) / grid.cols;
+            grid.cellH = (gridH - grid.gap * (grid.rows - 1)) / grid.rows;
+
+            grid.marginX = grid.plateX + internalPadding;
+            grid.marginY = grid.plateY + internalPadding;
+
+            // お香全体のパスを再構築
+            buildIncensePath();
+        }
+
+        // --- 2. お香の一筆書き（ジグザグ連結）パス構築 ---
+        function buildIncensePath() {
+            globalPoints = [];
+            const N = 6; // 各マスの縦線の本数 (6本で1時間 = 10分ピッチ)
+
+            for (let h = 0; h < 24; h++) {
+                // 時間hに対応するrow, colを決定
+                const row = Math.floor(h / 6);
+                const colInRow = h % 6;
+                // 奇数行(row=1,3)は右から左へ一筆書きを進めるため反転
+                const isReversed = (row % 2 === 1);
+                const col = isReversed ? (5 - colInRow) : colInRow;
+
+                // セルの左上座標
+                const cellX = grid.marginX + col * (grid.cellW + grid.gap);
+                const cellY = grid.marginY + row * (grid.cellH + grid.gap);
+
+                // 1ユニット内のお香の設計
+                const padX = grid.cellW * 0.12;
+                const padY = grid.cellH * 0.25; // お香の高さを下げて文字用スペースを確保
+                const activeW = grid.cellW - 2 * padX;
+                const activeH = grid.cellH - 2 * padY;
+                const pitch = activeW / (N - 1);
+
+                const localPoints = [];
+
+                // セルの左端または右端からのお香の引き込み線 (接続を滑らかにするため)
+                localPoints.push({ x: 0, y: padY });
+
+                for (let i = 0; i < N; i++) {
+                    const lx = padX + i * pitch;
+                    if (i % 2 === 0) {
+                        // 偶数インデックス: 上から下へ燃える
+                        localPoints.push({ x: lx, y: padY });
+                        localPoints.push({ x: lx, y: padY + activeH });
+                    } else {
+                        // 奇数インデックス: 下から上へ燃える
+                        localPoints.push({ x: lx, y: padY + activeH });
+                        localPoints.push({ x: lx, y: padY });
+                    }
+                }
+
+                // 終了引き込み線
+                localPoints.push({ x: grid.cellW, y: padY });
+
+                // 逆向き進行の行(奇数行)の場合は、ユニット全体を左右反転させる
+                if (isReversed) {
+                    localPoints.forEach(p => {
+                        p.x = grid.cellW - p.x;
+                    });
+                }
+
+                // グローバル座標に変換しつつ、全体のパスに追加
+                localPoints.forEach(p => {
+                    globalPoints.push({
+                        x: cellX + p.x,
+                        y: cellY + p.y,
+                        hour: h // 属する時間
+                    });
+                });
+            }
+
+            // 累積距離の算出
+            pathDistances = [0];
+            totalPathLength = 0;
+            for (let i = 1; i < globalPoints.length; i++) {
+                const p1 = globalPoints[i - 1];
+                const p2 = globalPoints[i];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                totalPathLength += dist;
+                pathDistances.push(totalPathLength);
+            }
+        }
+
+        // --- 3. 煙パーティクルシステム ---
+        class SmokeParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = -0.5 - Math.random() * 0.8; // 上へ上昇
+                this.size = 1 + Math.random() * 3;
+                this.maxLife = 100 + Math.random() * 80;
+                this.life = 0;
+                this.alpha = 0.35 + Math.random() * 0.25;
+                // ゆらゆら用のランダム位相
+                this.swingSpeed = 0.02 + Math.random() * 0.03;
+                this.swingWidth = 0.3 + Math.random() * 0.5;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.life++;
+                this.vy *= 0.99; // わずかな減速
+                this.y += this.vy;
+                // サイン関数による煙のゆらぎ
+                this.x += this.vx + Math.sin(this.life * this.swingSpeed + this.phase) * this.swingWidth;
+                this.size += 0.12; // 時間と共に広がる
+                this.alpha = (1 - (this.life / this.maxLife)) * 0.5;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(200, 195, 190, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // --- 4. 時間に基づく火点の座標特定 ---
+        function getFirePosition(secondsOfDay) {
+            // 1日は86400秒。比率を出す
+            const ratio = secondsOfDay / 86400;
+            const targetDist = ratio * totalPathLength;
+
+            // 二分探索で該当するセグメントを特定
+            let low = 0;
+            let high = pathDistances.length - 1;
+            let idx = 0;
+
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                if (pathDistances[mid] <= targetDist) {
+                    idx = mid;
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+            }
+
+            if (idx >= globalPoints.length - 1) {
+                const lastPt = globalPoints[globalPoints.length - 1];
+                return { x: lastPt.x, y: lastPt.y, index: globalPoints.length - 1, hour: 23 };
+            }
+
+            const d1 = pathDistances[idx];
+            const d2 = pathDistances[idx + 1];
+            const p1 = globalPoints[idx];
+            const p2 = globalPoints[idx + 1];
+
+            // セグメント内での線形補間
+            const segRatio = (targetDist - d1) / (d2 - d1);
+            const x = p1.x + (p2.x - p1.x) * segRatio;
+            const y = p1.y + (p2.y - p1.y) * segRatio;
+
+            return {
+                x: x,
+                y: y,
+                index: idx,
+                hour: p1.hour
+            };
+        }
+
+        // --- 5. 描画処理 (レンダリングループ) ---
+        function draw(time) {
+            const config = themeConfig[state.theme];
+
+            // 1. 背景のクリア (残像トレイルによる煙のぼかし効果)
+            ctx.fillStyle = config.bgEnd;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. 香盤 (トレイ) の描画
+            drawPlate(config);
+
+            // 3. 現在の時刻/秒数の取得
+            let seconds = 0;
+            if (state.mode === 'realtime') {
+                const now = new Date();
+                const hrs = now.getHours();
+                const mins = now.getMinutes();
+                const secs = now.getSeconds();
+                const ms = now.getMilliseconds();
+                seconds = hrs * 3600 + mins * 60 + secs + ms / 1000;
+
+                // 補助デジタル時計の更新
+                const timeStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (digitalTime.textContent !== timeStr) {
+                    digitalTime.textContent = timeStr;
+                }
+            } else {
+                // デモモード: 1フレームあたり約20秒進める (高速燃焼)
+                state.demoTime += 20;
+                if (state.demoTime >= 86400) {
+                    state.demoTime = 0;
+                }
+                seconds = state.demoTime;
+
+                // デモ時のデジタル表示更新
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                digitalTime.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+
+            // 火点の座標を計算
+            const fire = getFirePosition(seconds);
+
+            // 4. お香の経路描画 (灰と未燃焼のお香)
+            drawIncensePath(fire, config);
+
+            // 5. 目盛り (1時間ごとのラベルおよび10分ごとの目盛り) の描画
+            drawScales(config);
+
+            // 6. 煙パーティクルの更新・描画
+            updateAndDrawSmoke(fire);
+
+            // 7. 火点 (燃焼点) の描画 (グロー効果)
+            drawFirePoint(fire, time, config);
+
+            // FPS計測
+            state.frameCount++;
+            const now = performance.now();
+            if (now - state.lastFrameTime >= 1000) {
+                state.fps = Math.round((state.frameCount * 1000) / (now - state.lastFrameTime));
+                statusFPS.textContent = state.fps;
+                state.frameCount = 0;
+                state.lastFrameTime = now;
+            }
+
+            // 右下ステータス更新
+            const currentTemp = 740 + Math.sin(time * 0.005) * 40; // 火点温度のリアルなゆらぎ
+            document.getElementById('statusTemp').textContent = Math.round(currentTemp);
+
+            requestAnimationFrame(draw);
+        }
+
+        // 香盤プレート（お皿）の描画
+        function drawPlate(config) {
+            ctx.save();
+            // 香盤の外枠シャドウ
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 40;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 15;
+
+            // 外枠
+            ctx.fillStyle = config.plateBorder;
+            ctx.beginPath();
+            ctx.roundRect(grid.plateX, grid.plateY, grid.plateW, grid.plateH, 20);
+            ctx.fill();
+
+            // 内皿
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = config.plateColor;
+            ctx.beginPath();
+            const borderW = grid.plateW * 0.015;
+            ctx.roundRect(
+                grid.plateX + borderW, 
+                grid.plateY + borderW, 
+                grid.plateW - borderW * 2, 
+                grid.plateH - borderW * 2, 
+                15
+            );
+            ctx.fill();
+            ctx.restore();
+
+            // 盤面内の格子ガイドライン (うっすら敷くことで香盤らしさを演出)
+            ctx.strokeStyle = config.bgStart;
+            ctx.lineWidth = 1;
+            for (let r = 0; r < grid.rows; r++) {
+                for (let c = 0; c < grid.cols; c++) {
+                    const cx = grid.marginX + c * (grid.cellW + grid.gap);
+                    const cy = grid.marginY + r * (grid.cellH + grid.gap);
+                    ctx.strokeRect(cx, cy, grid.cellW, grid.cellH);
+                }
+            }
+        }
+
+        // お香と灰の描画
+        function drawIncensePath(fire, config) {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // 1. 灰 (過去の経路) の描画
+            if (fire.index > 0) {
+                // 灰のベース (やや太い黒灰)
+                ctx.beginPath();
+                ctx.moveTo(globalPoints[0].x, globalPoints[0].y);
+                for (let i = 1; i <= fire.index; i++) {
+                    ctx.lineTo(globalPoints[i].x, globalPoints[i].y);
+                }
+                ctx.lineTo(fire.x, fire.y);
+                ctx.strokeStyle = config.ashBase;
+                ctx.lineWidth = config.ashWidth + 1.5;
+                ctx.stroke();
+
+                // 灰の芯 (細い白灰で質感を出す)
+                ctx.strokeStyle = config.ashHighlight;
+                ctx.lineWidth = config.ashWidth - 1;
+                ctx.stroke();
+            }
+
+            // 2. 未燃焼のお香 (未来の経路) の描画
+            if (fire.index < globalPoints.length - 1) {
+                // お香のベース (深緑や茶褐色の抹香)
+                ctx.beginPath();
+                ctx.moveTo(fire.x, fire.y);
+                for (let i = fire.index + 1; i < globalPoints.length; i++) {
+                    ctx.lineTo(globalPoints[i].x, globalPoints[i].y);
+                }
+                ctx.strokeStyle = config.incenseBase;
+                ctx.lineWidth = config.incenseWidth;
+                ctx.stroke();
+
+                // お香の尾根 (中央の明るいハイライトラインで立体感を出す)
+                ctx.strokeStyle = config.incenseHighlight;
+                ctx.lineWidth = config.incenseWidth - 3;
+                ctx.stroke();
+
+                // お香の粒子感（点描による質感の追加）
+                // 静的ノイズのようなテクスチャをお香全体に付与
+                ctx.save();
+                ctx.strokeStyle = config.incenseHighlight;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([1, 4]);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // 目盛り（ラベル・数字・分スケール）の描画
+        function drawScales(config) {
+            ctx.save();
+            ctx.font = 'bold 18px "Outfit", "Shippori Mincho", sans-serif'; // フォントサイズを拡大
+            ctx.fillStyle = config.textMuted;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const activeCellHour = getFireHour();
+
+            for (let h = 0; h < 24; h++) {
+                const row = Math.floor(h / 6);
+                const colInRow = h % 6;
+                const isReversed = (row % 2 === 1);
+                const col = isReversed ? (5 - colInRow) : colInRow;
+
+                const cellX = grid.marginX + col * (grid.cellW + grid.gap);
+                const cellY = grid.marginY + row * (grid.cellH + grid.gap);
+
+                // 時間表記 (00, 01 ... 23)
+                const labelX = cellX + grid.cellW * 0.5;
+                const labelY = cellY + grid.cellH * 0.13; // Y座標を下げて表示位置を調整
+                
+                // 現在燃焼中の時間の枠・文字をハイライト
+                if (h === activeCellHour) {
+                    ctx.fillStyle = config.accentColor;
+                    ctx.font = '900 20px "Outfit", "Shippori Mincho", sans-serif'; // アクティブ時を20pxに拡大
+                    // 燃焼中のセルにうっすら光る枠を表示
+                    ctx.strokeStyle = `rgba(${hexToRgb(config.accentColor)}, 0.15)`;
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(cellX + 2, cellY + 2, grid.cellW - 4, grid.cellH - 4);
+                } else if (h < activeCellHour) {
+                    ctx.fillStyle = `rgba(${hexToRgb(config.textColor)}, 0.25)`; // 過去は薄暗く
+                    ctx.font = 'bold 16px "Outfit", "Shippori Mincho", sans-serif'; // 16pxに拡大
+                } else {
+                    ctx.fillStyle = config.textMuted;
+                    ctx.font = 'bold 18px "Outfit", "Shippori Mincho", sans-serif'; // 18pxに拡大
+                }
+
+                // 十二支と数値時間を組み合わせた粋な表記
+                const currentJunishi = junishi[Math.floor(h / 2)];
+                const isOddHour = (h % 2 === 1);
+                const suffix = isOddHour ? "正" : "初"; // 初刻・正刻の簡易表現
+                ctx.fillText(`${String(h).padStart(2, '0')}時 (${currentJunishi}${suffix})`, labelX, labelY);
+
+                // 10分刻みの目盛りドットを描画 (縦線6本を等分するように)
+                const padX = grid.cellW * 0.12;
+                const padY = grid.cellH * 0.25; // お香の余白変更と同期
+                const activeW = grid.cellW - 2 * padX;
+                const activeH = grid.cellH - 2 * padY;
+                const pitch = activeW / 5;
+
+                ctx.fillStyle = h < activeCellHour ? 'rgba(255,255,255,0.1)' : `rgba(${hexToRgb(config.textColor)}, 0.25)`;
+                if (h === activeCellHour) {
+                    ctx.fillStyle = `rgba(${hexToRgb(config.accentColor)}, 0.5)`;
+                }
+
+                for (let i = 1; i < 5; i++) {
+                    const dotX = cellX + (isReversed ? (grid.cellW - (padX + i * pitch)) : (padX + i * pitch));
+                    // 10分・30分・50分は下側、20分・40分は上側 (ジグザグの配置に対応)
+                    const dotY = cellY + padY + (i % 2 === 1 ? activeH : 0);
+                    
+                    ctx.beginPath();
+                    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2); // ドットサイズを3に微増
+                    ctx.fill();
+
+                    // 30分の位置には小さな「半」の文字（30分）を配置して可読性をアップ
+                    if (i === 3 && h === activeCellHour) {
+                        ctx.save();
+                        ctx.fillStyle = config.accentColor;
+                        ctx.font = 'bold 14px "Shippori Mincho", serif'; // 「半」を14pxに拡大
+                        ctx.fillText("半", dotX, dotY + (i % 2 === 1 ? 14 : -14)); // 被りを防ぐためY方向へのズレを14pxに調整
+                        ctx.restore();
+                    }
+                }
+            }
+            ctx.restore();
+        }
+
+        // 現在燃えている時間 (0〜23) を返す
+        function getFireHour() {
+            if (state.mode === 'realtime') {
+                return new Date().getHours();
+            } else {
+                return Math.floor(state.demoTime / 3600);
+            }
+        }
+
+        // 煙パーティクルの更新と描画
+        function updateAndDrawSmoke(fire) {
+            // 火点から煙の生成 (スライダー設定に応じた頻度)
+            const threshold = 0.6 - (state.smokeFrequency * 0.1); // 0.1〜0.5
+            if (Math.random() > threshold) {
+                smokeParticles.push(new SmokeParticle(fire.x, fire.y));
+            }
+
+            // 更新と描画
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                const p = smokeParticles[i];
+                p.update();
+                if (p.life > p.maxLife || p.y < 0) {
+                    smokeParticles.splice(i, 1);
+                } else {
+                    p.draw();
+                }
+            }
+        }
+
+        // 火点 (燃焼点) の光と芯を描画
+        function drawFirePoint(fire, time, config) {
+            ctx.save();
+
+            // 火点の熱グロー (赤熱するお香)
+            const wave = Math.sin(time * 0.008) * 3;
+            const glowRadius = 8 + wave;
+
+            ctx.shadowColor = config.accentColor;
+            ctx.shadowBlur = glowRadius * 2;
+            ctx.fillStyle = config.accentColor;
+
+            // 大きめの赤い余熱グロー
+            ctx.beginPath();
+            ctx.arc(fire.x, fire.y, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 高温の白い芯
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#ffffff';
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(fire.x, fire.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 周囲へのわずかな火の粉の飛散
+            if (Math.random() > 0.93) {
+                ctx.fillStyle = config.accentColor;
+                ctx.beginPath();
+                ctx.arc(
+                    fire.x + (Math.random() - 0.5) * 8, 
+                    fire.y + (Math.random() - 0.5) * 8, 
+                    0.5 + Math.random() * 0.8, 
+                    0, 
+                    Math.PI * 2
+                );
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // --- Helper: HexカラーをRGB文字列に変換 ---
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255';
+        }
+
+        // --- 6. UIイベント設定とコントロールパネル処理 ---
+        function setupUI() {
+            const panel = document.getElementById('controlPanel');
+            const toggle = document.getElementById('panelToggle');
+            const gearIcon = document.getElementById('gearIcon');
+
+            // 1. パネル開閉
+            toggle.addEventListener('click', () => {
+                const isCollapsed = panel.classList.toggle('collapsed');
+                if (isCollapsed) {
+                    gearIcon.style.transform = 'rotate(180deg)';
+                    toggle.setAttribute('title', '設定を開く');
+                } else {
+                    gearIcon.style.transform = 'rotate(0deg)';
+                    toggle.setAttribute('title', '設定を閉じる');
+                }
+            });
+
+            // 2. テーマボタン処理
+            const themeBtns = document.querySelectorAll('.theme-btn');
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const themeId = btn.getAttribute('data-theme-id');
+                    document.body.setAttribute('data-theme', themeId);
+                    state.theme = themeId;
+                    
+                    // UIアクセントの即時同期
+                    const config = themeConfig[themeId];
+                    document.documentElement.style.setProperty('--accent-color', config.accentColor);
+                });
+            });
+
+            // 3. モード切替
+            const modeOptions = document.querySelectorAll('.toggle-option');
+            modeOptions.forEach(opt => {
+                opt.addEventListener('click', () => {
+                    modeOptions.forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+
+                    const selectedMode = opt.getAttribute('data-mode');
+                    state.mode = selectedMode;
+
+                    if (selectedMode === 'realtime') {
+                        statusMode.textContent = '同期中';
+                    } else {
+                        statusMode.textContent = 'デモ中';
+                        // 現在時刻からデモを開始
+                        const now = new Date();
+                        state.demoTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                    }
+                });
+            });
+
+            // 4. 煙スライダー
+            const sliderSmoke = document.getElementById('sliderSmoke');
+            const valSmoke = document.getElementById('valSmoke');
+            const labels = ["無", "極小", "小", "中", "多"];
+            sliderSmoke.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                state.smokeFrequency = val;
+                valSmoke.textContent = labels[val - 1];
+            });
+        }
+
+        // --- 7. 初期化・ロードハンドリング ---
+        function init() {
+            calculateLayout();
+            setupUI();
+
+            // 画面サイズ変更の検知
+            window.addEventListener('resize', () => {
+                calculateLayout();
+            });
+
+            // アニメーションループ開始
+            requestAnimationFrame((time) => {
+                draw(time);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
