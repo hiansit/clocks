@@ -482,6 +482,46 @@
             fps: 60
         };
 
+        // 各和モダンテーマの配色設定（Canvas描画用）
+        const themeConfig = {
+            default: { // 欅琥珀
+                frameColorStart: '#2c1a13',
+                frameColorEnd: '#150b07',
+                frameBorder: '#3d241a',
+                beamColor: '#21130d',
+                rodColorStart: '#8e8070',
+                rodColorEnd: '#4a3f35',
+                beadColorStart: '#d35400',
+                beadColorMid: '#e67e22',
+                beadColorEnd: '#a04000',
+                beadHighlight: 'rgba(255, 255, 255, 0.25)'
+            },
+            shikkoku: { // 漆黒
+                frameColorStart: '#1a1515',
+                frameColorEnd: '#050404',
+                frameBorder: '#2c1111',
+                beamColor: '#110e0e',
+                rodColorStart: '#7f8c8d',
+                rodColorEnd: '#34495e',
+                beadColorStart: '#1e3820',
+                beadColorMid: '#2d5a30',
+                beadColorEnd: '#122413',
+                beadHighlight: 'rgba(168, 224, 176, 0.3)'
+            },
+            hakuji: { // 白磁
+                frameColorStart: '#2e3b4e',
+                frameColorEnd: '#18202c',
+                frameBorder: '#3a4b63',
+                beamColor: '#141b25',
+                rodColorStart: '#bdc3c7',
+                rodColorEnd: '#7f8c8d',
+                beadColorStart: '#e5e8e8',
+                beadColorMid: '#fcfcfc',
+                beadColorEnd: '#bdc3c7',
+                beadHighlight: 'rgba(255, 255, 255, 0.5)'
+            }
+        };
+
         // そろばん全体のジオメトリ・座標定義
         let geom = {
             width: 0,
@@ -525,6 +565,7 @@
                 const w = geom.beadWidth;
                 const h = geom.beadHeight;
                 const cy = this.y;
+                const config = themeConfig[state.theme];
 
                 ctx.save();
                 
@@ -539,11 +580,11 @@
                 // テーマに合わせた3D立体グラデーション
                 // 左から右への線形グラデーションに加え、中央にハイライトを入れる
                 const grad = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-                grad.addColorStop(0, 'var(--bead-color-start)');
-                grad.addColorStop(0.35, 'var(--bead-color-mid)');
+                grad.addColorStop(0, config.beadColorStart);
+                grad.addColorStop(0.35, config.beadColorMid);
                 grad.addColorStop(0.5, '#ffffff'); // センターハイライト
-                grad.addColorStop(0.65, 'var(--bead-color-mid)');
-                grad.addColorStop(1, 'var(--bead-color-end)');
+                grad.addColorStop(0.65, config.beadColorMid);
+                grad.addColorStop(1, config.beadColorEnd);
 
                 ctx.fillStyle = grad;
                 ctx.fill();
@@ -558,7 +599,7 @@
                 ctx.moveTo(x - w / 2 + 1, cy);
                 ctx.lineTo(x, cy - h / 2 + 1);
                 ctx.lineTo(x + w / 2 - 1, cy);
-                ctx.strokeStyle = 'var(--bead-highlight)';
+                ctx.strokeStyle = config.beadHighlight;
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
 
@@ -643,17 +684,18 @@
 
             draw(ctx) {
                 const x = geom.columnsX[this.colIndex];
+                const config = themeConfig[state.theme];
 
                 ctx.save();
                 
                 // 1. 軸（芯棒）の立体描画
                 const rodWidth = Math.max(3, geom.beadWidth * 0.08);
                 const rodGrad = ctx.createLinearGradient(x - rodWidth/2, 0, x + rodWidth/2, 0);
-                rodGrad.addColorStop(0, 'var(--rod-color-end)');
-                rodGrad.addColorStop(0.3, 'var(--rod-color-start)');
+                rodGrad.addColorStop(0, config.rodColorEnd);
+                rodGrad.addColorStop(0.3, config.rodColorStart);
                 rodGrad.addColorStop(0.5, '#ffffff'); // 芯棒の金属反射
-                rodGrad.addColorStop(0.7, 'var(--rod-color-start)');
-                rodGrad.addColorStop(1, 'var(--rod-color-end)');
+                rodGrad.addColorStop(0.7, config.rodColorStart);
+                rodGrad.addColorStop(1, config.rodColorEnd);
                 
                 ctx.fillStyle = rodGrad;
                 ctx.fillRect(x - rodWidth / 2, geom.y + geom.borderWidth, rodWidth, geom.rodLength);
@@ -781,6 +823,7 @@
 
         // --- 4. 立体的な木製外枠（フレーム）の描画 ---
         function drawSorobanFrame() {
+            const config = themeConfig[state.theme];
             ctx.save();
 
             // 1. そろばん外枠のドロップシャドウ（影）
@@ -791,9 +834,9 @@
 
             // 2. 外枠フレームの描画（木目調グラデーション）
             const frameGrad = ctx.createLinearGradient(geom.x, geom.y, geom.x, geom.y + geom.height);
-            frameGrad.addColorStop(0, 'var(--frame-color-start)');
-            frameGrad.addColorStop(0.5, 'var(--frame-color-end)');
-            frameGrad.addColorStop(1, 'var(--frame-color-start)');
+            frameGrad.addColorStop(0, config.frameColorStart);
+            frameGrad.addColorStop(0.5, config.frameColorEnd);
+            frameGrad.addColorStop(1, config.frameColorStart);
 
             ctx.fillStyle = frameGrad;
             ctx.beginPath();
@@ -816,9 +859,9 @@
 
             // 3. 梁（横仕切り）の描画
             const beamGrad = ctx.createLinearGradient(0, geom.beamY, 0, geom.beamY + geom.beamHeight);
-            beamGrad.addColorStop(0, 'var(--beam-color)');
-            beamGrad.addColorStop(0.5, 'var(--frame-color-start)');
-            beamGrad.addColorStop(1, 'var(--beam-color)');
+            beamGrad.addColorStop(0, config.beamColor);
+            beamGrad.addColorStop(0.5, config.frameColorStart);
+            beamGrad.addColorStop(1, config.beamColor);
 
             ctx.fillStyle = beamGrad;
             ctx.fillRect(geom.x + geom.borderWidth, geom.beamY, geom.width - geom.borderWidth * 2, geom.beamHeight);
@@ -832,9 +875,9 @@
                 const sepX = x1 + (x2 - x1 - sepW) / 2;
 
                 const sepGrad = ctx.createLinearGradient(sepX, 0, sepX + sepW, 0);
-                sepGrad.addColorStop(0, 'var(--frame-color-end)');
-                sepGrad.addColorStop(0.5, 'var(--frame-color-start)');
-                sepGrad.addColorStop(1, 'var(--frame-color-end)');
+                sepGrad.addColorStop(0, config.frameColorEnd);
+                sepGrad.addColorStop(0.5, config.frameColorStart);
+                sepGrad.addColorStop(1, config.frameColorEnd);
 
                 ctx.fillStyle = sepGrad;
                 // 天（上部）の柱
@@ -843,7 +886,7 @@
                 ctx.fillRect(sepX, geom.beamY + geom.beamHeight, sepW, (geom.y + geom.height - geom.borderWidth) - (geom.beamY + geom.beamHeight));
                 
                 // 柱のエッジライン
-                ctx.strokeStyle = 'var(--frame-border)';
+                ctx.strokeStyle = config.frameBorder;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(sepX, geom.y + geom.borderWidth, sepW, geom.beamY - (geom.y + geom.borderWidth));
                 ctx.strokeRect(sepX, geom.beamY + geom.beamHeight, sepW, (geom.y + geom.height - geom.borderWidth) - (geom.beamY + geom.beamHeight));
@@ -853,7 +896,7 @@
             drawSeparator(3, 4);
 
             // 5. 外枠の内側・外側の飾りエッジライン（立体感を高める）
-            ctx.strokeStyle = 'var(--frame-border)';
+            ctx.strokeStyle = config.frameBorder;
             ctx.lineWidth = 1.5;
             // 外周
             ctx.strokeRect(geom.x, geom.y, geom.width, geom.height);
@@ -865,7 +908,7 @@
                 geom.height - geom.borderWidth * 2
             );
             // 梁のエッジ
-            ctx.strokeStyle = 'var(--frame-border)';
+            ctx.strokeStyle = config.frameBorder;
             ctx.beginPath();
             ctx.moveTo(geom.x + geom.borderWidth, geom.beamY);
             ctx.lineTo(geom.x + geom.width - geom.borderWidth, geom.beamY);
