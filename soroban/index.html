@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soroban Clock - そろばん時計 Widget</title>
+    <!-- Google Fonts から極太サンセリフ、和風モダンな明朝体、モノスペースフォントをロード -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Shippori+Mincho:wght@500;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* CSSカスタムプロパティによる和モダン・テーマ設計 */
+        :root {
+            --bg-gradient-start: #0f0a0a;
+            --bg-gradient-end: #030202;
+            --accent-color: #d35400; /* そろばんの木・ブロンズをイメージしたアンバー */
+            --panel-bg: rgba(15, 10, 10, 0.6);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f5f0eb;
+            --text-muted: #a89f95;
+            
+            /* そろばんの配色定義 */
+            --frame-color-start: #2c1a13;
+            --frame-color-end: #150b07;
+            --frame-border: #3d241a;
+            --beam-color: #21130d;
+            --rod-color-start: #8e8070;
+            --rod-color-end: #4a3f35;
+            --bead-color-start: #d35400;
+            --bead-color-mid: #e67e22;
+            --bead-color-end: #a04000;
+            --bead-highlight: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 1. 漆黒 (Shikkoku) - 漆と深緑の珠 */
+        [data-theme="shikkoku"] {
+            --bg-gradient-start: #0c0909;
+            --bg-gradient-end: #020101;
+            --accent-color: #e74c3c; /* 朱赤 */
+            --panel-bg: rgba(12, 9, 9, 0.65);
+            --panel-border: rgba(231, 76, 60, 0.15);
+            
+            --frame-color-start: #1a1515;
+            --frame-color-end: #050404;
+            --frame-border: #2c1111;
+            --beam-color: #110e0e;
+            --rod-color-start: #7f8c8d;
+            --rod-color-end: #34495e;
+            --bead-color-start: #1e3820; /* 深い緑檀調 */
+            --bead-color-mid: #2d5a30;
+            --bead-color-end: #122413;
+            --bead-highlight: rgba(168, 224, 176, 0.3);
+        }
+
+        /* 2. 白磁 (Hakuji) - 陶器の白と静かな青磁色の枠 */
+        [data-theme="hakuji"] {
+            --bg-gradient-start: #1e222b;
+            --bg-gradient-end: #0c0e12;
+            --accent-color: #2ecc71; /* 青磁緑 */
+            --panel-bg: rgba(30, 34, 43, 0.7);
+            --panel-border: rgba(46, 204, 113, 0.15);
+            --text-primary: #e6ecef;
+            --text-muted: #8fa0a8;
+
+            --frame-color-start: #2e3b4e; /* 青磁がかったモダングレー */
+            --frame-color-end: #18202c;
+            --frame-border: #3a4b63;
+            --beam-color: #141b25;
+            --rod-color-start: #bdc3c7;
+            --rod-color-end: #7f8c8d;
+            --bead-color-start: #e5e8e8; /* 乳白色・象牙調 */
+            --bead-color-mid: #fcfcfc;
+            --bead-color-end: #bdc3c7;
+            --bead-highlight: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 3. 紫檀 (Shitan) - 紫檀木目と金泥の珠 */
+        [data-theme="shitan"] {
+            --bg-gradient-start: #1c0d0d;
+            --bg-gradient-end: #070303;
+            --accent-color: #f1c40f; /* 金色 */
+            --panel-bg: rgba(28, 13, 13, 0.7);
+            --panel-border: rgba(241, 196, 15, 0.15);
+            --text-primary: #faebd7;
+            --text-muted: #bda290;
+
+            --frame-color-start: #3e1616; /* 高級紫檀の深い赤茶 */
+            --frame-color-end: #1c0707;
+            --frame-border: #562020;
+            --beam-color: #160505;
+            --rod-color-start: #e2c074; /* 真鍮の芯棒 */
+            --rod-color-end: #8a6f37;
+            --bead-color-start: #9e640b; /* 琥珀・黄土色 */
+            --bead-color-mid: #df9e38;
+            --bead-color-end: #6d4103;
+            --bead-highlight: rgba(255, 230, 153, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-gradient-end);
+            font-family: 'Shippori Mincho', serif;
+            color: var(--text-primary);
+            transition: background 1s ease;
+        }
+
+        /* メイン描画用Canvas */
+        #sorobanCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+        }
+
+        /* 背景グラデーション */
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            z-index: 0;
+            transition: background 1s ease;
+        }
+
+        /* ガラスモーフィズム設定パネル */
+        .control-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 10;
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+            transform-origin: top left;
+        }
+
+        .control-panel.collapsed {
+            transform: scale(0.9) translate(-20px, -20px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* パネル開閉ギアボタン */
+        .toggle-btn {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 11;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+            transition: transform 0.5s ease;
+        }
+
+        /* コレクションに戻るボタン */
+        .back-btn {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 10;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--text-muted);
+            transform: translateX(4px);
+        }
+
+        /* ヘッダー */
+        .panel-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .panel-title span.accent-text {
+            color: var(--accent-color);
+        }
+
+        .panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 4px 0 0 0;
+        }
+
+        /* 各種設定項目 */
+        .control-group {
+            margin-bottom: 18px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.08em;
+        }
+
+        /* 色彩テーマ選択グリッド */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .theme-btn {
+            height: 38px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-family: 'Shippori Mincho', serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+        }
+
+        .theme-btn.active {
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 800;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
+        }
+
+        .theme-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* 動作モードトグル */
+        .toggle-switch {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 3px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .toggle-option {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            color: var(--text-muted);
+        }
+
+        .toggle-option.active {
+            background: var(--accent-color);
+            color: #030202;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 右下の補助デジタル表示 */
+        .info-panel {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            line-height: 1.6;
+        }
+
+        .info-panel span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* デジタル時計表示 */
+        .digital-clock {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* フェードイン表示 */
+        .fade-in {
+            animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .control-panel {
+                width: calc(100% - 48px);
+                top: 80px;
+                left: 24px;
+            }
+            .toggle-btn {
+                top: 16px;
+                right: 24px;
+            }
+        }
+    </style>
+</head>
+<body data-theme="default">
+    <!-- 背景グラデーション -->
+    <div class="bg-overlay"></div>
+
+    <!-- 描画用キャンバス -->
+    <canvas id="sorobanCanvas"></canvas>
+
+    <!-- 戻るボタン -->
+    <a href="../index.html" class="back-btn fade-in">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        コレクションに戻る
+    </a>
+
+    <!-- UI開閉トグルボタン -->
+    <button class="toggle-btn" id="panelToggle" title="設定を開閉">
+        <svg viewBox="0 0 24 24" id="gearIcon">
+            <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.57-3-3.5s1.07-3.5 3-3.5 3 1.57 3 3.5-1.07 3.5-3 3.5z"/>
+        </svg>
+    </button>
+
+    <!-- コントロールパネル -->
+    <div class="control-panel fade-in" id="controlPanel">
+        <div class="panel-header">
+            <h1 class="panel-title">
+                <svg width="22" height="22" viewBox="0 0 24 24" style="fill: var(--accent-color); vertical-align: middle; margin-right: 4px;">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6h-2V7h2v2zm-4 0H9V7h2v2zm-2 2h2v2H9v-2zm4 0h2v2h-2v-2zm2 4h-2v2h2v-2zm-4 0H9v2h2v-2z"/>
+                </svg>
+                そろばん時計 <span class="accent-text">SOROBAN</span>
+            </h1>
+            <p class="panel-subtitle">伝統的な計算器をモチーフにしたデジタル時計</p>
+        </div>
+
+        <!-- 色彩テーマ選択 -->
+        <div class="control-group">
+            <div class="control-label">色彩テーマ</div>
+            <div class="theme-grid">
+                <button class="theme-btn active" data-theme-id="default" title="欅琥珀">
+                    <span class="theme-dot" style="background-color: #d35400;"></span>
+                    欅琥珀
+                </button>
+                <button class="theme-btn" data-theme-id="shikkoku" title="漆黒">
+                    <span class="theme-dot" style="background-color: #e74c3c;"></span>
+                    漆黒
+                </button>
+                <button class="theme-btn" data-theme-id="hakuji" title="白磁">
+                    <span class="theme-dot" style="background-color: #2ecc71;"></span>
+                    白磁
+                </button>
+            </div>
+        </div>
+
+        <!-- 動作モード -->
+        <div class="control-group" style="margin-bottom: 0;">
+            <div class="control-label">動作モード</div>
+            <div class="toggle-switch">
+                <div class="toggle-option active" data-mode="realtime">現在時刻同期</div>
+                <div class="toggle-option" data-mode="demo">高速デモ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右下のデジタル情報表示 -->
+    <div class="info-panel fade-in">
+        <div class="digital-clock" id="digitalTime">00:00:00</div>
+        STATUS: <span id="statusMode">同期中</span><br>
+        SOROBAN BEADS: <span id="beadCount">27</span> / 30 active<br>
+        FPS: <span id="statusFPS">60</span>
+    </div>
+
+    <script>
+        // --- 定数・グローバル状態の管理 ---
+        const canvas = document.getElementById('sorobanCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const digitalTime = document.getElementById('digitalTime');
+        const statusMode = document.getElementById('statusMode');
+        const statusFPS = document.getElementById('statusFPS');
+        const beadCountEl = document.getElementById('beadCount');
+
+        // アプリケーションの状態
+        const state = {
+            theme: 'default', // 'default', 'shikkoku', 'hakuji', 'shitan' (欅はdefaultにマッピング)
+            mode: 'realtime', // 'realtime' or 'demo'
+            demoTime: 0, // デモモード時の累積秒数 (0〜86400)
+            lastFrameTime: performance.now(),
+            frameCount: 0,
+            fps: 60
+        };
+
+        // そろばん全体のジオメトリ・座標定義
+        let geom = {
+            width: 0,
+            height: 0,
+            x: 0,
+            y: 0,
+            borderWidth: 20,
+            beamY: 0,
+            beamHeight: 12,
+            columnWidth: 0,
+            beadWidth: 0,
+            beadHeight: 0,
+            columnsX: [], // 各桁のX中心座標
+            upperTop: 0, // 五珠の可動域上端
+            upperBottom: 0, // 五珠の可動域下端
+            lowerTop: 0, // 一珠の可動域上端
+            lowerBottom: 0, // 一珠の可動域下端
+            rodLength: 0
+        };
+
+        // --- 1. 珠（Bead）クラスの設計 ---
+        class Bead {
+            constructor(type, index) {
+                this.type = type; // 'go' (五珠) または 'ichi' (一珠)
+                this.index = index; // 一珠の場合は上から 0〜3 のインデックス
+                this.y = 0; // 現在のY座標
+                this.targetY = 0; // ターゲットY座標
+            }
+
+            update() {
+                // イージングを用いた滑らかな珠の移動 (0.16の速度で補間)
+                const dy = this.targetY - this.y;
+                if (Math.abs(dy) > 0.05) {
+                    this.y += dy * 0.16;
+                } else {
+                    this.y = this.targetY;
+                }
+            }
+
+            draw(ctx, x) {
+                const w = geom.beadWidth;
+                const h = geom.beadHeight;
+                const cy = this.y;
+
+                ctx.save();
+                
+                // そろばん玉特有の「上下に鋭角なひし形」を描く
+                ctx.beginPath();
+                ctx.moveTo(x, cy - h / 2); // 上頂点
+                ctx.lineTo(x + w / 2, cy); // 右頂点
+                ctx.lineTo(x, cy + h / 2); // 下頂点
+                ctx.lineTo(x - w / 2, cy); // 左頂点
+                ctx.closePath();
+
+                // テーマに合わせた3D立体グラデーション
+                // 左から右への線形グラデーションに加え、中央にハイライトを入れる
+                const grad = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+                grad.addColorStop(0, 'var(--bead-color-start)');
+                grad.addColorStop(0.35, 'var(--bead-color-mid)');
+                grad.addColorStop(0.5, '#ffffff'); // センターハイライト
+                grad.addColorStop(0.65, 'var(--bead-color-mid)');
+                grad.addColorStop(1, 'var(--bead-color-end)');
+
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // 珠の外枠に細い輪郭を描き、形状をシャープに見せる
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 上半分の光沢（反射光）を表現
+                ctx.beginPath();
+                ctx.moveTo(x - w / 2 + 1, cy);
+                ctx.lineTo(x, cy - h / 2 + 1);
+                ctx.lineTo(x + w / 2 - 1, cy);
+                ctx.strokeStyle = 'var(--bead-highlight)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // 下半分の影を表現
+                ctx.beginPath();
+                ctx.moveTo(x - w / 2 + 1, cy);
+                ctx.lineTo(x, cy + h / 2 - 1);
+                ctx.lineTo(x + w / 2 - 1, cy);
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // --- 2. 桁（Column）クラスの設計 ---
+        class SorobanColumn {
+            constructor(colIndex) {
+                this.colIndex = colIndex;
+                this.value = 0; // 現在保持している値 (0〜9)
+                
+                // 1桁につき、五珠1個、一珠4個
+                this.upperBead = new Bead('go', 0);
+                this.lowerBeads = [
+                    new Bead('ichi', 0),
+                    new Bead('ichi', 1),
+                    new Bead('ichi', 2),
+                    new Bead('ichi', 3)
+                ];
+            }
+
+            setValue(val) {
+                if (this.value === val) return;
+                this.value = val;
+                this.calculateTargetPositions();
+            }
+
+            // 各珠のターゲット位置をそろばんの計算ルールに則って計算
+            calculateTargetPositions() {
+                const bh = geom.beadHeight;
+                
+                // 1. 五珠 (Upper Bead)
+                const goActive = (this.value >= 5);
+                if (goActive) {
+                    // 活性状態: 梁（下）にくっつく
+                    this.upperBead.targetY = geom.beamY - bh / 2 - 2;
+                } else {
+                    // 非活性状態: 上枠（上）にくっつく
+                    this.upperBead.targetY = geom.upperTop + bh / 2 + 2;
+                }
+
+                // 2. 一珠 (Lower Beads, 4つ)
+                const ichiCount = this.value % 5; // 梁に上げる一珠の数 (0〜4)
+                
+                for (let i = 0; i < 4; i++) {
+                    const bead = this.lowerBeads[i];
+                    if (i < ichiCount) {
+                        // 活性状態 (梁側に上がる)
+                        // 梁の底から順に下に向かって隙間なく並べる
+                        bead.targetY = (geom.beamY + geom.beamHeight) + bh / 2 + (i * bh) + 2;
+                    } else {
+                        // 非活性状態 (下枠側に下がる)
+                        // 下枠の頭から順に上に向かって隙間なく並べる
+                        // インデックスが大きくなるほど下枠に近い
+                        bead.targetY = geom.lowerBottom - bh / 2 - ((3 - i) * bh) - 2;
+                    }
+                }
+            }
+
+            // 桁内の全珠の初期座標を瞬時にセットする（初期化用）
+            snapToTarget() {
+                this.calculateTargetPositions();
+                this.upperBead.y = this.upperBead.targetY;
+                this.lowerBeads.forEach(b => b.y = b.targetY);
+            }
+
+            update() {
+                this.upperBead.update();
+                this.lowerBeads.forEach(b => b.update());
+            }
+
+            draw(ctx) {
+                const x = geom.columnsX[this.colIndex];
+
+                ctx.save();
+                
+                // 1. 軸（芯棒）の立体描画
+                const rodWidth = Math.max(3, geom.beadWidth * 0.08);
+                const rodGrad = ctx.createLinearGradient(x - rodWidth/2, 0, x + rodWidth/2, 0);
+                rodGrad.addColorStop(0, 'var(--rod-color-end)');
+                rodGrad.addColorStop(0.3, 'var(--rod-color-start)');
+                rodGrad.addColorStop(0.5, '#ffffff'); // 芯棒の金属反射
+                rodGrad.addColorStop(0.7, 'var(--rod-color-start)');
+                rodGrad.addColorStop(1, 'var(--rod-color-end)');
+                
+                ctx.fillStyle = rodGrad;
+                ctx.fillRect(x - rodWidth / 2, geom.y + geom.borderWidth, rodWidth, geom.rodLength);
+
+                // 2. 梁の定位点（黒いポッチ）の描画
+                // 日本のそろばんでは、各数字の一の位（0, 2, 4番目のインデックス）の梁の上にマークがある
+                // 時(0,1桁) 分(2,3桁) 秒(4,5桁) なので、1, 3, 5番目の桁（一の位）の梁の上に描画する
+                if (this.colIndex === 1 || this.colIndex === 3 || this.colIndex === 5) {
+                    ctx.beginPath();
+                    ctx.arc(x, geom.beamY + geom.beamHeight / 2, Math.max(3, geom.beadWidth * 0.08), 0, Math.PI * 2);
+                    ctx.fillStyle = '#000000'; // 定位点
+                    ctx.fill();
+                }
+
+                // 3. 珠の描画
+                this.upperBead.draw(ctx, x);
+                this.lowerBeads.forEach(b => b.draw(ctx, x));
+
+                ctx.restore();
+            }
+
+            // 梁に接しているアクティブな珠の数を数える (デバッグ/インフォ用)
+            getActiveBeadCount() {
+                let count = 0;
+                if (this.value >= 5) count += 1;
+                count += (this.value % 5);
+                return count;
+            }
+        }
+
+        // 6つの桁オブジェクトを生成
+        const columns = [
+            new SorobanColumn(0), // 時の10の位
+            new SorobanColumn(1), // 時の1の位
+            new SorobanColumn(2), // 分の10の位
+            new SorobanColumn(3), // 分の1の位
+            new SorobanColumn(4), // 秒の10の位
+            new SorobanColumn(5)  // 秒の1の位
+        ];
+
+        // --- 3. 座標系・そろばんレイアウトの計算 ---
+        function calculateLayout() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // そろばん全体のアスペクト比を約 2.8 : 1 に設計
+            const targetAspect = 2.8;
+            const padRatio = 0.08; // 画面余白割合
+            
+            let sorobanW, sorobanH;
+            if (w / h > targetAspect) {
+                sorobanH = h * (1 - padRatio * 2);
+                sorobanW = sorobanH * targetAspect;
+            } else {
+                sorobanW = w * (1 - padRatio * 2);
+                sorobanH = sorobanW / targetAspect;
+            }
+
+            // モバイル等の最小保証サイズ
+            sorobanW = Math.max(sorobanW, 300);
+            sorobanH = sorobanW / targetAspect;
+
+            geom.width = sorobanW;
+            geom.height = sorobanH;
+            geom.x = (w - sorobanW) / 2;
+            geom.y = (h - sorobanH) / 2;
+
+            // 外枠と梁の厚み計算
+            geom.borderWidth = Math.max(12, sorobanH * 0.07);
+            geom.beamHeight = Math.max(8, sorobanH * 0.04);
+            
+            // 梁のY座標（上から約1/3の位置）
+            geom.beamY = geom.y + geom.borderWidth + (sorobanH - geom.borderWidth * 2) * 0.28;
+
+            // 珠の基本サイズの決定
+            // 1桁の縦スペースにおける五珠（天）と一珠（地）の可動域設計
+            // 天：珠1個分可動、地：珠1個分可動
+            const innerHeight = sorobanH - geom.borderWidth * 2;
+            const upperSpace = geom.beamY - (geom.y + geom.borderWidth);
+            const lowerSpace = (geom.y + sorobanH - geom.borderWidth) - (geom.beamY + geom.beamHeight);
+
+            // 珠の高さ（天は珠2個分のスペース、地は珠5個分のスペースがあるので、それに適したサイズを算出）
+            geom.beadHeight = Math.min(upperSpace / 2.2, lowerSpace / 5.2);
+            geom.beadWidth = geom.beadHeight * 1.65; // 横に平べったいそろばん玉の比率
+
+            // 可動域限界値の設定
+            geom.upperTop = geom.y + geom.borderWidth;
+            geom.upperBottom = geom.beamY;
+            geom.lowerTop = geom.beamY + geom.beamHeight;
+            geom.lowerBottom = geom.y + sorobanH - geom.borderWidth;
+            geom.rodLength = sorobanH - geom.borderWidth * 2;
+
+            // 時・分・秒を2桁ずつの3グループに分け、グループ間に広い仕切り（セパレーター）を入れる
+            const groupGap = geom.beadWidth * 0.8; // グループ間の広い隙間
+            const normalGap = geom.beadWidth * 0.25; // 通常の桁同士の隙間
+            geom.columnWidth = geom.beadWidth;
+
+            // 全体の有効幅からXオフセットを計算
+            // 6桁 + 3つの通常隙間 + 2つのグループ間隙間
+            const totalRequiredW = (geom.columnWidth * 6) + (normalGap * 3) + (groupGap * 2);
+            
+            // 左側の余白開始位置
+            let startX = geom.x + (sorobanW - totalRequiredW) / 2 + geom.columnWidth / 2;
+
+            geom.columnsX = [];
+            let currentX = startX;
+
+            for (let i = 0; i < 6; i++) {
+                geom.columnsX.push(currentX);
+                
+                // 次の桁のX座標を計算
+                if (i === 1 || i === 3) {
+                    // 時と分、分と秒の間（グループ境界）
+                    currentX += geom.columnWidth + groupGap;
+                } else {
+                    currentX += geom.columnWidth + normalGap;
+                }
+            }
+
+            // レイアウト変更に合わせて、全珠のターゲット位置と現在位置を瞬時に更新
+            columns.forEach(col => col.snapToTarget());
+        }
+
+        // --- 4. 立体的な木製外枠（フレーム）の描画 ---
+        function drawSorobanFrame() {
+            ctx.save();
+
+            // 1. そろばん外枠のドロップシャドウ（影）
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 30;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 15;
+
+            // 2. 外枠フレームの描画（木目調グラデーション）
+            const frameGrad = ctx.createLinearGradient(geom.x, geom.y, geom.x, geom.y + geom.height);
+            frameGrad.addColorStop(0, 'var(--frame-color-start)');
+            frameGrad.addColorStop(0.5, 'var(--frame-color-end)');
+            frameGrad.addColorStop(1, 'var(--frame-color-start)');
+
+            ctx.fillStyle = frameGrad;
+            ctx.beginPath();
+            // 外側の矩形
+            ctx.rect(geom.x, geom.y, geom.width, geom.height);
+            // 内側の穴をくり抜く（反時計回りのパスで穴をあける）
+            ctx.rect(
+                geom.x + geom.borderWidth,
+                geom.y + geom.borderWidth + geom.height - geom.borderWidth*2,
+                geom.width - geom.borderWidth * 2,
+                -(geom.height - geom.borderWidth * 2)
+            );
+            ctx.closePath();
+            ctx.fill();
+
+            // シャドウをオフにする
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // 3. 梁（横仕切り）の描画
+            const beamGrad = ctx.createLinearGradient(0, geom.beamY, 0, geom.beamY + geom.beamHeight);
+            beamGrad.addColorStop(0, 'var(--beam-color)');
+            beamGrad.addColorStop(0.5, 'var(--frame-color-start)');
+            beamGrad.addColorStop(1, 'var(--beam-color)');
+
+            ctx.fillStyle = beamGrad;
+            ctx.fillRect(geom.x + geom.borderWidth, geom.beamY, geom.width - geom.borderWidth * 2, geom.beamHeight);
+
+            // 4. 時・分・秒のグループを区切る縦の仕切り柱（セパレーター）を描画
+            // セパレーターは、1番目と2番目の桁の間、3番目と4番目の桁の間のYスペースに配置
+            const drawSeparator = (leftColIdx, rightColIdx) => {
+                const x1 = geom.columnsX[leftColIdx] + geom.beadWidth / 2;
+                const x2 = geom.columnsX[rightColIdx] - geom.beadWidth / 2;
+                const sepW = (x2 - x1) * 0.6;
+                const sepX = x1 + (x2 - x1 - sepW) / 2;
+
+                const sepGrad = ctx.createLinearGradient(sepX, 0, sepX + sepW, 0);
+                sepGrad.addColorStop(0, 'var(--frame-color-end)');
+                sepGrad.addColorStop(0.5, 'var(--frame-color-start)');
+                sepGrad.addColorStop(1, 'var(--frame-color-end)');
+
+                ctx.fillStyle = sepGrad;
+                // 天（上部）の柱
+                ctx.fillRect(sepX, geom.y + geom.borderWidth, sepW, geom.beamY - (geom.y + geom.borderWidth));
+                // 地（下部）の柱
+                ctx.fillRect(sepX, geom.beamY + geom.beamHeight, sepW, (geom.y + geom.height - geom.borderWidth) - (geom.beamY + geom.beamHeight));
+                
+                // 柱のエッジライン
+                ctx.strokeStyle = 'var(--frame-border)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(sepX, geom.y + geom.borderWidth, sepW, geom.beamY - (geom.y + geom.borderWidth));
+                ctx.strokeRect(sepX, geom.beamY + geom.beamHeight, sepW, (geom.y + geom.height - geom.borderWidth) - (geom.beamY + geom.beamHeight));
+            };
+
+            drawSeparator(1, 2);
+            drawSeparator(3, 4);
+
+            // 5. 外枠の内側・外側の飾りエッジライン（立体感を高める）
+            ctx.strokeStyle = 'var(--frame-border)';
+            ctx.lineWidth = 1.5;
+            // 外周
+            ctx.strokeRect(geom.x, geom.y, geom.width, geom.height);
+            // 内周
+            ctx.strokeRect(
+                geom.x + geom.borderWidth,
+                geom.y + geom.borderWidth,
+                geom.width - geom.borderWidth * 2,
+                geom.height - geom.borderWidth * 2
+            );
+            // 梁のエッジ
+            ctx.strokeStyle = 'var(--frame-border)';
+            ctx.beginPath();
+            ctx.moveTo(geom.x + geom.borderWidth, geom.beamY);
+            ctx.lineTo(geom.x + geom.width - geom.borderWidth, geom.beamY);
+            ctx.moveTo(geom.x + geom.borderWidth, geom.beamY + geom.beamHeight);
+            ctx.lineTo(geom.x + geom.width - geom.borderWidth, geom.beamY + geom.beamHeight);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // --- 5. 時間に基づくそろばん値の設定 ---
+        function updateTime() {
+            let hrs = 0, mins = 0, secs = 0;
+
+            if (state.mode === 'realtime') {
+                const now = new Date();
+                hrs = now.getHours();
+                mins = now.getMinutes();
+                secs = now.getSeconds();
+
+                // デジタル表示の更新
+                const timeStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (digitalTime.textContent !== timeStr) {
+                    digitalTime.textContent = timeStr;
+                }
+            } else {
+                // デモモード: 1フレームあたり8秒進める（24時間が約3時間でループする超高速）
+                state.demoTime += 8;
+                if (state.demoTime >= 86400) {
+                    state.demoTime = 0;
+                }
+                
+                const dHrs = Math.floor(state.demoTime / 3600);
+                const dMins = Math.floor((state.demoTime % 3600) / 60);
+                const dSecs = Math.floor(state.demoTime % 60);
+                
+                hrs = dHrs;
+                mins = dMins;
+                secs = dSecs;
+
+                const timeStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (digitalTime.textContent !== timeStr) {
+                    digitalTime.textContent = timeStr;
+                }
+            }
+
+            // 各桁の値（0〜9）をセット
+            columns[0].setValue(Math.floor(hrs / 10));
+            columns[1].setValue(hrs % 10);
+            columns[2].setValue(Math.floor(mins / 10));
+            columns[3].setValue(mins % 10);
+            columns[4].setValue(Math.floor(secs / 10));
+            columns[5].setValue(secs % 10);
+
+            // 右下の動作中アクティブ珠数を集計表示
+            let activeBeads = 0;
+            columns.forEach(col => activeBeads += col.getActiveBeadCount());
+            beadCountEl.textContent = activeBeads;
+        }
+
+        // --- 6. 描画処理 (メインループ) ---
+        function draw() {
+            // 背景クリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // そろばん本体（軸、梁、定位点、珠など）を描画
+            // 軸・珠などの背景要素を先に描くため、外枠フレームは一番最後に重ねる
+            
+            // 各桁の描画
+            columns.forEach(col => {
+                col.update();
+                col.draw(ctx);
+            });
+
+            // 外枠と梁の描画（影と立体エッジを上から重ねる）
+            drawSorobanFrame();
+        }
+
+        // メインループ
+        function loop(timestamp) {
+            // FPS計測
+            state.frameCount++;
+            if (timestamp - state.lastFrameTime >= 1000) {
+                state.fps = Math.round((state.frameCount * 1000) / (timestamp - state.lastFrameTime));
+                statusFPS.textContent = state.fps;
+                state.frameCount = 0;
+                state.lastFrameTime = timestamp;
+            }
+
+            // 時間情報の更新
+            updateTime();
+
+            // レンダリング
+            draw();
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- 7. イベント設定とコントロールUI ---
+        window.addEventListener('resize', calculateLayout);
+
+        // テーマ切り替え
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        themeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const theme = e.currentTarget.getAttribute('data-theme-id');
+                document.body.setAttribute('data-theme', theme);
+                state.theme = theme;
+                
+                themeButtons.forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+            });
+        });
+
+        // 動作モード切り替え
+        const modeOptions = document.querySelectorAll('.toggle-option');
+        modeOptions.forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                const mode = e.currentTarget.getAttribute('data-mode');
+                state.mode = mode;
+                
+                modeOptions.forEach(o => o.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+
+                if (mode === 'realtime') {
+                    statusMode.textContent = '同期中';
+                } else {
+                    statusMode.textContent = 'デモ再生';
+                    // デモ用の初期時刻を現在時刻の秒数に合わせる
+                    const now = new Date();
+                    state.demoTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                }
+            });
+        });
+
+        // パネル開閉トグル
+        const panelToggle = document.getElementById('panelToggle');
+        const controlPanel = document.getElementById('controlPanel');
+        const gearIcon = document.getElementById('gearIcon');
+
+        panelToggle.addEventListener('click', () => {
+            controlPanel.classList.toggle('collapsed');
+            
+            // ギアアイコンの回転アニメーション
+            if (controlPanel.classList.contains('collapsed')) {
+                gearIcon.style.transform = 'rotate(0deg)';
+            } else {
+                gearIcon.style.transform = 'rotate(180deg)';
+            }
+        });
+
+        // --- 8. アプリケーション初期化 ---
+        calculateLayout();
+        
+        // 初回のみ、アニメーションなしで即座に現在の時刻の形にする
+        const now = new Date();
+        const hrs = now.getHours();
+        const mins = now.getMinutes();
+        const secs = now.getSeconds();
+        columns[0].setValue(Math.floor(hrs / 10));
+        columns[1].setValue(hrs % 10);
+        columns[2].setValue(Math.floor(mins / 10));
+        columns[3].setValue(mins % 10);
+        columns[4].setValue(Math.floor(secs / 10));
+        columns[5].setValue(secs % 10);
+        columns.forEach(col => col.snapToTarget());
+
+        // ループ開始
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
